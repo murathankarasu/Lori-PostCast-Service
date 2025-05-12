@@ -132,5 +132,7 @@ def generate_audio():
     return jsonify({'audio_url': audio_url})
 
 if __name__ == '__main__':
-    print("[LOG] Flask sunucusu başlatılıyor...")
-    app.run(debug=True)
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    print(f"[LOG] Flask sunucusu başlatılıyor... Port: {port}")
+    app.run(host="0.0.0.0", port=port, debug=True)
