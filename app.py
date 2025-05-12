@@ -26,11 +26,11 @@ app = Flask(__name__)
 # Google Cloud Storage ve Firestore setup
 from google.cloud import storage, firestore
 
-# GCP servisleri için kimlik dosyası ayarlanmalı (GOOGLE_APPLICATION_CREDENTIALS env ile)
+GCP_PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT")
 
 def upload_to_gcs(local_path, dest_blob_name, bucket_name):
     print(f"[LOG] Dosya GCS'ye yükleniyor: {local_path} -> {bucket_name}/{dest_blob_name}")
-    storage_client = storage.Client()
+    storage_client = storage.Client(project=GCP_PROJECT_ID)
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(dest_blob_name)
     blob.upload_from_filename(local_path)
@@ -40,14 +40,14 @@ def upload_to_gcs(local_path, dest_blob_name, bucket_name):
 
 def save_audio_url_to_firestore(user_id, audio_url, collection_name):
     print(f"[LOG] Firestore'a kaydediliyor: user_id={user_id}, url={audio_url}")
-    db = firestore.Client()
+    db = firestore.Client(project=GCP_PROJECT_ID)
     doc_ref = db.collection(collection_name).document(user_id)
     doc_ref.set({"podcast_audio_url": audio_url}, merge=True)
     print(f"[LOG] Firestore güncellendi.")
 
 def delete_from_gcs(blob_name, bucket_name):
     print(f"[LOG] GCS'den siliniyor: {bucket_name}/{blob_name}")
-    storage_client = storage.Client()
+    storage_client = storage.Client(project=GCP_PROJECT_ID)
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(blob_name)
     if blob.exists():
@@ -57,7 +57,7 @@ def delete_from_gcs(blob_name, bucket_name):
         print(f"[LOG] GCS'de dosya bulunamadı: {blob_name}")
 
 def get_audio_url_from_firestore(user_id, collection_name):
-    db = firestore.Client()
+    db = firestore.Client(project=GCP_PROJECT_ID)
     doc_ref = db.collection(collection_name).document(user_id)
     doc = doc_ref.get()
     if doc.exists:
