@@ -5,6 +5,7 @@ from utils import fetch_recommendations_and_extract, mix_podcast_with_music, rem
 from gpt_client import generate_podcast_script
 from bark_client import text_to_speech_edge_tts
 import os
+import traceback
 
 try:
     from config import OPENROUTER_API_KEY
@@ -128,6 +129,7 @@ def generate_audio():
                 print(f"[LOG] Local dosya silindi: {path}")
     except Exception as e:
         print(f"[ERROR] {str(e)}")
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
     return jsonify({'audio_url': audio_url})
 
