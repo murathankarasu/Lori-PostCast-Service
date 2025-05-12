@@ -15,16 +15,16 @@ except ImportError:
     OPENROUTER_API_KEY = None
     GOOGLE_APPLICATION_CREDENTIALS_PATH = None
 
-# GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable'ı varsa dosya olarak yaz
-json_env = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_JSON")
-if json_env:
+# GOOGLE_APPLICATION_CREDENTIALS environment variable'ı varsa dosya olarak yaz
+json_env = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+if json_env and json_env.strip().startswith('{'):
     credentials_path = "/tmp/credentials.json"
     with open(credentials_path, "w") as f:
         f.write(json_env)
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
     print("[LOG] Service account JSON dosyası /tmp/credentials.json olarak yazıldı ve ortam değişkeni ayarlandı.", flush=True)
 else:
-    print("[WARN] GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable'ı bulunamadı.", flush=True)
+    print("[WARN] GOOGLE_APPLICATION_CREDENTIALS environment variable'ı bulunamadı veya JSON formatında değil.", flush=True)
 
 if GOOGLE_APPLICATION_CREDENTIALS_PATH:
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GOOGLE_APPLICATION_CREDENTIALS_PATH
@@ -111,7 +111,7 @@ def generate_audio():
         save_audio_url_to_firestore(user_id, GCP_FIRESTORE_COLLECTION)
         print(f"[LOG] İşlem tamamlandı. gs://... yolu Firestore'a kaydedildi.", flush=True)
         for path in [audio_path, final_audio_path]:
-            if os.path.exists(path):
+            if old_audio_url and os.path.exists(path):
                 os.remove(path)
                 print(f"[LOG] Local dosya silindi: {path}", flush=True)
     except Exception as e:
