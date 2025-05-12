@@ -46,7 +46,7 @@ def generate_podcast_script(contents_and_emotions: List[tuple], api_key: str, mo
             {"role": "user", "content": prompt}
         ]
     }
-    response = requests.post(url, headers=headers, json=data)
+    response = requests.post(url, headers=headers, json=data, timeout=15)
     response.raise_for_status()
     result = response.json()
     content = result['choices'][0]['message']['content']

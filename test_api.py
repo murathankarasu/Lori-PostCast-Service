@@ -1,6 +1,6 @@
 import requests
 
-url = "http://127.0.0.1:5000/generate_audio"
+url = "https://lori-postcast-service-main-services.up.railway.app/generate_audio"
 data = {
     "user_id": "isRKPOpG4zVFmULHJjrsvY8t1Nb2",
     "username": "Murathan"
