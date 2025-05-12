@@ -10,3 +10,4 @@ google-cloud-firestore
 pydub
 ffmpeg-python
 edge-tts
+torch
