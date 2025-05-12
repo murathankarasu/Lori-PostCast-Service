@@ -7,6 +7,7 @@ from bark_client import text_to_speech_edge_tts
 import os
 import traceback
 from google.cloud import firestore
+import base64
 
 try:
     from config import OPENROUTER_API_KEY
@@ -15,16 +16,23 @@ except ImportError:
     OPENROUTER_API_KEY = None
     GOOGLE_APPLICATION_CREDENTIALS_PATH = None
 
-# GOOGLE_APPLICATION_CREDENTIALS environment variable'ı varsa dosya olarak yaz
+# GOOGLE_APPLICATION_CREDENTIALS environment variable'ı hem düz JSON hem de base64 olarak destekleniyor
 json_env = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-if json_env and json_env.strip().startswith('{'):
-    credentials_path = "/tmp/credentials.json"
-    with open(credentials_path, "w") as f:
-        f.write(json_env)
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
-    print("[LOG] Service account JSON dosyası /tmp/credentials.json olarak yazıldı ve ortam değişkeni ayarlandı.", flush=True)
+if json_env:
+    try:
+        if json_env.strip().startswith('{'):
+            decoded = json_env
+        else:
+            decoded = base64.b64decode(json_env).decode('utf-8')
+        credentials_path = "/tmp/credentials.json"
+        with open(credentials_path, "w") as f:
+            f.write(decoded)
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
+        print("[LOG] Service account JSON dosyası /tmp/credentials.json olarak yazıldı ve ortam değişkeni ayarlandı.", flush=True)
+    except Exception as e:
+        print(f"[ERROR] GOOGLE_APPLICATION_CREDENTIALS değişkeni çözümlenemedi: {e}", flush=True)
 else:
-    print("[WARN] GOOGLE_APPLICATION_CREDENTIALS environment variable'ı bulunamadı veya JSON formatında değil.", flush=True)
+    print("[WARN] GOOGLE_APPLICATION_CREDENTIALS environment variable'ı bulunamadı.", flush=True)
 
 if GOOGLE_APPLICATION_CREDENTIALS_PATH:
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GOOGLE_APPLICATION_CREDENTIALS_PATH
