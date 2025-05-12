@@ -6,7 +6,7 @@ from gpt_client import generate_podcast_script
 from bark_client import text_to_speech_edge_tts
 import os
 import traceback
-from google.cloud import firestore
+from google.cloud import firestore, storage
 import base64
 
 try:
@@ -67,6 +67,13 @@ def get_audio_url_from_firestore(user_id, collection_name):
     print(f"[LOG] Firestore'da podcast_audio_url bulunamadı", flush=True)
     return None
 
+def upload_to_gcs(local_path, bucket_name, destination_blob_name):
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(destination_blob_name)
+    blob.upload_from_filename(local_path)
+    print(f"[LOG] Dosya GCS'ye yüklendi: {destination_blob_name}", flush=True)
+
 @app.route('/generate_audio', methods=['POST'])
 def generate_audio():
     print("[LOG] /generate_audio isteği alındı.", flush=True)
@@ -115,6 +122,9 @@ def generate_audio():
         final_audio_path = f"static/audio/{user_id}_podcast_with_music.mp3"
         print(f"[LOG] Arka plan müziği ile birleştiriliyor: {final_audio_path}", flush=True)
         mix_podcast_with_music(audio_path, music_path, final_audio_path)
+        # Dosyayı Google Cloud Storage'a yükle
+        gcs_blob_path = f"podcasts/{user_id}_podcast_with_music.mp3"
+        upload_to_gcs(final_audio_path, GCP_BUCKET_NAME, gcs_blob_path)
         print(f"[LOG] Firestore'a audio URL kaydediliyor...", flush=True)
         save_audio_url_to_firestore(user_id, GCP_FIRESTORE_COLLECTION)
         print(f"[LOG] İşlem tamamlandı. gs://... yolu Firestore'a kaydedildi.", flush=True)
