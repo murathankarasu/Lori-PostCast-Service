@@ -15,6 +15,17 @@ except ImportError:
     OPENROUTER_API_KEY = None
     GOOGLE_APPLICATION_CREDENTIALS_PATH = None
 
+# GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable'ı varsa dosya olarak yaz
+json_env = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_JSON")
+if json_env:
+    credentials_path = "/tmp/credentials.json"
+    with open(credentials_path, "w") as f:
+        f.write(json_env)
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
+    print("[LOG] Service account JSON dosyası /tmp/credentials.json olarak yazıldı ve ortam değişkeni ayarlandı.", flush=True)
+else:
+    print("[WARN] GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable'ı bulunamadı.", flush=True)
+
 if GOOGLE_APPLICATION_CREDENTIALS_PATH:
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GOOGLE_APPLICATION_CREDENTIALS_PATH
 
