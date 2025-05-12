@@ -6,6 +6,7 @@ from gpt_client import generate_podcast_script
 from bark_client import text_to_speech_edge_tts
 import os
 import traceback
+from google.cloud import firestore
 
 try:
     from config import OPENROUTER_API_KEY
@@ -24,43 +25,20 @@ GCP_FIRESTORE_COLLECTION = "audio_urls"
 
 app = Flask(__name__)
 
-# Google Cloud Storage ve Firestore setup
-from google.cloud import storage, firestore
-
 GCP_PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT")
 
-def upload_to_gcs(local_path, dest_blob_name, bucket_name):
-    print(f"[LOG] Dosya GCS'ye yükleniyor: {local_path} -> {bucket_name}/{dest_blob_name}")
-    storage_client = storage.Client(project=GCP_PROJECT_ID)
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(dest_blob_name)
-    blob.upload_from_filename(local_path, timeout=15)
-    blob.make_public()
-    print(f"[LOG] Dosya GCS'de herkese açık: {blob.public_url}")
-    return blob.public_url
-
-def save_audio_url_to_firestore(user_id, audio_url, collection_name):
-    print(f"[LOG] Firestore'a kaydediliyor: user_id={user_id}, url={audio_url}")
+def save_audio_url_to_firestore(user_id, collection_name):
+    gs_url = f"gs://lorien-app-tr.firebasestorage.app/podcasts/{user_id}_podcast_with_music.mp3"
+    print(f"[LOG] Firestore'a kaydediliyor: user_id={user_id}, url={gs_url}")
     db = firestore.Client(project=GCP_PROJECT_ID)
     doc_ref = db.collection(collection_name).document(user_id)
-    doc_ref.set({"podcast_audio_url": audio_url}, merge=True, timeout=15)
+    doc_ref.set({"podcast_audio_url": gs_url}, merge=True)
     print(f"[LOG] Firestore güncellendi.")
-
-def delete_from_gcs(blob_name, bucket_name):
-    print(f"[LOG] GCS'den siliniyor: {bucket_name}/{blob_name}")
-    storage_client = storage.Client(project=GCP_PROJECT_ID)
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(blob_name)
-    if blob.exists(timeout=10):
-        blob.delete(timeout=10)
-        print(f"[LOG] GCS'den silindi: {blob_name}")
-    else:
-        print(f"[LOG] GCS'de dosya bulunamadı: {blob_name}")
 
 def get_audio_url_from_firestore(user_id, collection_name):
     db = firestore.Client(project=GCP_PROJECT_ID)
     doc_ref = db.collection(collection_name).document(user_id)
-    doc = doc_ref.get(timeout=10)
+    doc = doc_ref.get()
     if doc.exists:
         return doc.to_dict().get("podcast_audio_url")
     return None
@@ -88,12 +66,6 @@ def generate_audio():
         print("[LOG] Firestore'dan eski audio URL'si alınıyor...")
         old_audio_url = get_audio_url_from_firestore(user_id, GCP_FIRESTORE_COLLECTION)
         print(f"[LOG] Eski audio URL: {old_audio_url}")
-        if old_audio_url:
-            from urllib.parse import urlparse
-            parsed = urlparse(old_audio_url)
-            blob_name = parsed.path.lstrip('/')
-            print(f"[LOG] Eski audio GCS'den siliniyor: {blob_name}")
-            delete_from_gcs(blob_name, GCP_BUCKET_NAME)
         print(f"[LOG] Postlar çekiliyor: user_id={user_id}")
         posts = fetch_recommendations_and_extract(user_id)
         print(f"[LOG] Postlar: {posts}")
@@ -119,17 +91,9 @@ def generate_audio():
         final_audio_path = f"static/audio/{user_id}_podcast_with_music.mp3"
         print(f"[LOG] Arka plan müziği ile birleştiriliyor: {final_audio_path}")
         mix_podcast_with_music(audio_path, music_path, final_audio_path)
-        print(f"[LOG] GCS'ye dosya yükleniyor: {final_audio_path}")
-        gcs_blob_name = f"podcasts/{user_id}_podcast_with_music.mp3"
-        audio_url = upload_to_gcs(final_audio_path, gcs_blob_name, GCP_BUCKET_NAME)
-        print(f"[LOG] GCS'ye yüklenen dosya URL: {audio_url}")
-        if audio_url:
-            print(f"[LOG] Dosya GCS'ye başarıyla yüklendi: {audio_url}")
-        else:
-            print(f"[ERROR] Dosya GCS'ye yüklenemedi!")
         print(f"[LOG] Firestore'a audio URL kaydediliyor...")
-        save_audio_url_to_firestore(user_id, audio_url, GCP_FIRESTORE_COLLECTION)
-        print(f"[LOG] İşlem tamamlandı. URL: {audio_url}")
+        save_audio_url_to_firestore(user_id, GCP_FIRESTORE_COLLECTION)
+        print(f"[LOG] İşlem tamamlandı. gs://... yolu Firestore'a kaydedildi.")
         for path in [audio_path, final_audio_path]:
             if os.path.exists(path):
                 os.remove(path)
@@ -138,7 +102,8 @@ def generate_audio():
         print(f"[ERROR] {str(e)}")
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
-    return jsonify({'audio_url': audio_url})
+    gs_url = f"gs://lorien-app-tr.firebasestorage.app/podcasts/{user_id}_podcast_with_music.mp3"
+    return jsonify({'audio_url': gs_url})
 
 if __name__ == '__main__':
     import os
