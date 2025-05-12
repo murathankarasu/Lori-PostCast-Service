@@ -74,6 +74,10 @@ def upload_to_gcs(local_path, bucket_name, destination_blob_name):
     blob.upload_from_filename(local_path)
     print(f"[LOG] Dosya GCS'ye yüklendi: {destination_blob_name}", flush=True)
 
+def gs_to_http(gs_url):
+    bucket, path = gs_url.replace('gs://', '').split('/', 1)
+    return f"https://storage.googleapis.com/{bucket}/{path}"
+
 @app.route('/generate_audio', methods=['POST'])
 def generate_audio():
     print("[LOG] /generate_audio isteği alındı.", flush=True)
@@ -137,8 +141,9 @@ def generate_audio():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
     gs_url = f"gs://lorien-app-tr.firebasestorage.app/podcasts/{user_id}_podcast_with_music.mp3"
-    print(f"[LOG] /generate_audio isteği başarıyla tamamlandı. gs_url: {gs_url}", flush=True)
-    return jsonify({'audio_url': gs_url})
+    http_url = gs_to_http(gs_url)
+    print(f"[LOG] /generate_audio isteği başarıyla tamamlandı. gs_url: {gs_url}, http_url: {http_url}", flush=True)
+    return jsonify({'audio_url': gs_url, 'public_url': http_url})
 
 if __name__ == '__main__':
     import os
