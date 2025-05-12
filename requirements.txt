@@ -1,0 +1,12 @@
+Flask
+requests
+numpy
+scipy
+# Bark için aşağıdaki satırı kullanabilirsiniz, eğer pip ile kurulum destekleniyorsa:
+# bark
+# Eğer bark pip ile yoksa, github üzerinden kurulum veya manuel kurulum gerekebilir.
+google-cloud-storage
+google-cloud-firestore
+pydub
+ffmpeg-python
+edge-tts
